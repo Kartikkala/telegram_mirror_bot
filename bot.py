@@ -1,6 +1,7 @@
 import telegram
 import threading
 from time import sleep
+from authorization import Authorization
 
 
 
@@ -74,35 +75,10 @@ class MyBot:
             MyBot.__lastServedUID = UpdateID
             print(f"Incoming: {MyBot.__user_id}")
             print(f"Parsing...{UpdateID} | Message: {MyBot.__message} | Last served UID: {MyBot._getLastServedUID()}",end = '\n')
-        
-    @classmethod
-    def __isGroupChat(cls, chat_info):
-        if(chat_info['type'] == 'private'):
-            return False
-        else:
-            return True
-    
-    @classmethod 
-    def __isAuthorized(cls, chat_info, user_id):
-        if(MyBot.__isGroupChat(chat_info)):
-            try:
-                allowedIds = MyBot.__authorised_people[chat_info['id']]
-                if user_id in allowedIds:
-                    return True
-                else:
-                    return False
-            except:
-                print("Some error occured while checking groups!!!")
-
-        else:
-            if(user_id == MyBot.__owner_id):
-                return True
-            else:
-                return False
 
     @classmethod
     def __reply(cls):
-        if(MyBot.__isAuthorized(MyBot.__chat_info,MyBot.__user_id)):
+        if ( Authorization.isAuthorized (MyBot.__chat_info, MyBot.__user_id, MyBot.__authorised_people, MyBot.__owner_id) ):
             MyBot.__categorizeAnd__reply(MyBot.__chat_info['id'],MyBot.__message)
             print(f"Is authorized, message: {MyBot.__message}")
         else:
