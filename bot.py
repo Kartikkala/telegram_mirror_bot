@@ -18,46 +18,42 @@ class MyBot:
 
 
     @classmethod
-    def _getMemberInfo(cls, index):
+    def _getMemberInfo(cls, index):                  #Extracts all info about user from chat (return type:dictinoary)
         return MyBot.__update_list[index]['message'].to_dict().get('from')
 
 
-    @classmethod
+    @classmethod                                                
     def _getULIST(cls):
         return MyBot.__update_list
 
     @classmethod
-    def _getLastServedUID(cls):
+    def _getLastServedUID(cls):                     #Returns last served Update ID
         return MyBot.__lastServedUID
 
-    @classmethod
+    @classmethod                                    #Returns JSON/Dictionary at a particular index in the Update list returned by Telegram API
     def _getJSON(cls , index):
         update_list = MyBot._getULIST()
         return update_list[index]
 
-    @classmethod
+    @classmethod                                    #Returns the length of the update list returned by Telegram API
     def List_Len(cls):
         return len(MyBot.__update_list)
 
 
-    @classmethod
+    @classmethod                                    #Updates the update list by latest update, removes everything before last served Update ID
     def __latestUpdate(cls):
-        MyBot.__update_list = MyBot.__bot.getUpdates(offset = MyBot._getLastServedUID(), timeout = 2)       # List with JSON
+        MyBot.__update_list = MyBot.__bot.getUpdates(offset = MyBot._getLastServedUID(), timeout = 2) 
     
     
-    @classmethod
+    @classmethod                                    #Starts polling on telegram bot API
     def startUpdatePolling(cls):
         while(1):
             MyBot.__latestUpdate()
             sleep(0.5)
 
-
-    @classmethod
-    def approve(cls):
-        pass
     
-    @classmethod
-    def parse(cls):
+    @classmethod                                    #Parse the latest Update dictionary from telegram API, extracts info to class variables
+    def parse(cls):                     
         while(1):
             while(MyBot.List_Len()==0):
                 sleep(0.5)
@@ -76,16 +72,15 @@ class MyBot:
             print(f"Incoming: {MyBot.__user_id}")
             print(f"Parsing...{UpdateID} | Message: {MyBot.__message} | Last served UID: {MyBot._getLastServedUID()}",end = '\n')
 
-    @classmethod
-    def __reply(cls):
+    @classmethod                                    #Replies to a chat after checking if chat is authorised or not
+    def __reply(cls):                               
         if ( Authorization.isAuthorized (MyBot.__chat_info, MyBot.__user_id, MyBot.__authorised_people, MyBot.__owner_id) ):
             MyBot.__categorizeAnd__reply(MyBot.__chat_info['id'],MyBot.__message)
             print(f"Is authorized, message: {MyBot.__message}")
         else:
             print("Is not authorized")
-            pass
 
-    @classmethod
+    @classmethod                                    #Replies to a chat on the basis of Commands or normal chats
     def __categorizeAnd__reply(cls,chat_id,message):
         if(message[0] == '/'):
             MyBot.____replyToCommand(chat_id, message)
