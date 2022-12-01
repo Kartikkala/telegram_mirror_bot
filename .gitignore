@@ -3,3 +3,4 @@ queuetest.py
 telegramtest.py
 test.py
 __pycache__/
+*.json
