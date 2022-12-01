@@ -11,15 +11,28 @@ class MyBot:
     __bot = telegram.Bot(__bot_token)
     __lastServedUID = 0
     __authorised_people = {-1001358301916:[1239653417,1972073012]}
+
+    #Chat info
+
     __owner_id = 1239653417
     __chat_info = {}
     __message = ''
+    __MessageId = 0
+    __repliedMessage ={}
     __user_id = 0
 
 
     @classmethod
     def _getMemberInfo(cls, index):                  #Extracts all info about user from chat (return type:dictinoary)
         return MyBot.__update_list[index]['message'].to_dict().get('from')
+    
+    
+    @classmethod
+    def _getReplyMemberInfo(cls):
+        try:
+            return MyBot.__repliedMessage.to_dict().get('reply_to_message').get('from')
+        except:
+            return None
 
 
     @classmethod                                                
@@ -47,9 +60,11 @@ class MyBot:
     
     @classmethod                                    #Starts polling on telegram bot API
     def startUpdatePolling(cls):
+        MyBot.__authorised_people = Authorization.readData('authorized_users.json',MyBot.__authorised_people)
         while(1):
             MyBot.__latestUpdate()
             sleep(0.5)
+            
 
     
     @classmethod                                    #Parse the latest Update dictionary from telegram API, extracts info to class variables
@@ -63,9 +78,14 @@ class MyBot:
             UpdateID = json['update_id']
             if(UpdateID == MyBot._getLastServedUID()):
                 continue
+
+            # MyBot.__repliedMessage = None
             MyBot.__chat_info = json['message']['chat']
             MyBot.__message = json['message']['text']
             MyBot.__user_id = MyBot._getMemberInfo(latest_message)['id']
+            MyBot.__MessageId = json['message']['message_id']
+            # if(json['message']['reply_to_message']!=None):
+            MyBot.__repliedMessage = json['message']
 
             MyBot.__reply()
             MyBot.__lastServedUID = UpdateID
@@ -82,24 +102,35 @@ class MyBot:
 
     @classmethod                                    #Replies to a chat on the basis of Commands or normal chats
     def __categorizeAnd__reply(cls,chat_id,message):
-        if(message[0] == '/'):
-            MyBot.____replyToCommand(chat_id, message)
-        else:
-            MyBot.____replyToChat(chat_id, message)
+        try:
+            if(message[0] == '/'):
+                MyBot.____replyToCommand(chat_id, message)
+            else:
+                MyBot.____replyToChat(chat_id, message)
+        except:
+            print("My man is sending stickers :)")
+
 
     @classmethod
     def ____replyToCommand(cls, chat_id, message):
         if(message == '/start' or message == "/start"):
-            MyBot.__bot.sendMessage(chat_id, "Hello, Bot has been started!!!")
+            MyBot.__bot.sendMessage(chat_id, "Hello, Bot has been started!!!",reply_to_message_id = MyBot.__MessageId)
         elif(message == '/help'):
-            MyBot.__bot.sendMessage(chat_id, "/help - Help command \n/start - Start the bot \n/mirror <Download link to the file>: Mirror a file")
+            MyBot.__bot.sendMessage(chat_id, "/help - Help command \n/start - Start the bot \n/mirror <Download link to the file>: Mirror a file", reply_to_message_id = MyBot.__MessageId)
         elif(message == '/mirror'):
-            MyBot.__bot.sendMessage(chat_id, "This functionality has not been implemented yet!!!")
+            MyBot.__bot.sendMessage(chat_id, "This functionality has not been implemented yet!!!", reply_to_message_id = MyBot.__MessageId)
+        elif(message == '/authorize'):
+            if MyBot._getReplyMemberInfo() == None:
+                MyBot.__bot.sendMessage(chat_id, "Reply to someone's message to authorize him.", reply_to_message_id = MyBot.__MessageId)
+            else:
+                Authorization_status = Authorization.authorize(MyBot.__chat_info, MyBot._getReplyMemberInfo()['id'], MyBot.__authorised_people, MyBot.__owner_id)
+                MyBot.__bot.sendMessage(chat_id, Authorization_status, reply_to_message_id = MyBot.__MessageId)
         
 
     @classmethod
     def ____replyToChat(cls, chat_id, message):
         pass
+
 
 
 thread1 = threading.Thread(target = MyBot.startUpdatePolling)
