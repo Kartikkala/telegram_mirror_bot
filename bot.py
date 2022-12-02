@@ -6,6 +6,7 @@ from authorization import Authorization
 
 
 class MyBot:
+    __LastServedUIDfile = 'LSUID'
     __bot_token = "5941804301:AAFptut_3g30maH6Ed1XAuWs7cQKfOK_fK8"
     __update_list = []
     __bot = telegram.Bot(__bot_token)
@@ -43,6 +44,22 @@ class MyBot:
     def _getLastServedUID(cls):                     #Returns last served Update ID
         return MyBot.__lastServedUID
 
+    @classmethod
+    def readLastServedUID(cls):
+        try:
+            with open(MyBot.__LastServedUIDfile, 'r+') as LSUIDf:
+                MyBot.__lastServedUID = int(LSUIDf.read())
+        except:
+            with open(MyBot.__LastServedUIDfile, 'w+') as LSUIDf:
+                print("File created for first time use.")
+    
+
+    @classmethod
+    def writeLastServedUID(cls, LastServedUID):
+        with open(MyBot.__LastServedUIDfile, 'w+') as LSUIDf:
+            LSUIDf.write(str(LastServedUID))
+    
+
     @classmethod                                    #Returns JSON/Dictionary at a particular index in the Update list returned by Telegram API
     def _getJSON(cls , index):
         update_list = MyBot._getULIST()
@@ -61,6 +78,8 @@ class MyBot:
     @classmethod                                    #Starts polling on telegram bot API
     def startUpdatePolling(cls):
         MyBot.__authorised_people = Authorization.readData('authorized_users.json',MyBot.__authorised_people)
+        MyBot.readLastServedUID()
+        print(f"Bot started... Last served UID: {MyBot.__lastServedUID}\n")
         while(1):
             MyBot.__latestUpdate()
             sleep(0.5)
@@ -89,6 +108,7 @@ class MyBot:
 
             MyBot.__reply()
             MyBot.__lastServedUID = UpdateID
+            MyBot.writeLastServedUID(MyBot.__lastServedUID)
             print(f"Incoming: {MyBot.__user_id}")
             print(f"Parsing...{UpdateID} | Message: {MyBot.__message} | Last served UID: {MyBot._getLastServedUID()}",end = '\n')
 
@@ -115,15 +135,29 @@ class MyBot:
     def ____replyToCommand(cls, chat_id, message):
         if(message == '/start' or message == "/start"):
             MyBot.__bot.sendMessage(chat_id, "Hello, Bot has been started!!!",reply_to_message_id = MyBot.__MessageId)
+
         elif(message == '/help'):
             MyBot.__bot.sendMessage(chat_id, "/help - Help command \n/start - Start the bot \n/mirror <Download link to the file>: Mirror a file", reply_to_message_id = MyBot.__MessageId)
+
         elif(message == '/mirror'):
             MyBot.__bot.sendMessage(chat_id, "This functionality has not been implemented yet!!!", reply_to_message_id = MyBot.__MessageId)
+
+        elif(message == '/authstatus'):
+            Auth_status = Authorization.auth_status(MyBot.__chat_info, MyBot._getReplyMemberInfo()['id'], MyBot.__authorised_people, MyBot.__owner_id)
+            MyBot.__bot.sendMessage(chat_id, Auth_status, reply_to_message_id = MyBot.__MessageId)
+
         elif(message == '/authorize'):
             if MyBot._getReplyMemberInfo() == None:
                 MyBot.__bot.sendMessage(chat_id, "Reply to someone's message to authorize him.", reply_to_message_id = MyBot.__MessageId)
             else:
                 Authorization_status = Authorization.authorize(MyBot.__chat_info, MyBot._getReplyMemberInfo()['id'], MyBot.__authorised_people, MyBot.__owner_id)
+                MyBot.__bot.sendMessage(chat_id, Authorization_status, reply_to_message_id = MyBot.__MessageId)
+        
+        elif(message == '/unauthorize'):
+            if MyBot._getReplyMemberInfo() == None:
+                MyBot.__bot.sendMessage(chat_id, "Reply to someone's message to unauthorize him.", reply_to_message_id = MyBot.__MessageId)
+            else:
+                Authorization_status = Authorization.unauthorize(MyBot.__chat_info, MyBot._getReplyMemberInfo()['id'], MyBot.__authorised_people, MyBot.__owner_id)
                 MyBot.__bot.sendMessage(chat_id, Authorization_status, reply_to_message_id = MyBot.__MessageId)
         
 
