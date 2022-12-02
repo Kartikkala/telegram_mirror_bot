@@ -2,12 +2,20 @@ import telegram
 import threading
 from time import sleep
 from authorization import Authorization
+import yaml
+
+class LoadConfig:
+    @classmethod
+    def getBotToken(cls, configFilePath):
+        with open(configFilePath, 'r') as configFile:
+            config = yaml.load(configFile, Loader=yaml.FullLoader)
+            return config['botToken']
 
 
 
 class MyBot:
     __LastServedUIDfile = 'LSUID'
-    __bot_token = "5941804301:AAFptut_3g30maH6Ed1XAuWs7cQKfOK_fK8"
+    __bot_token= LoadConfig.getBotToken('config.yml')
     __update_list = []
     __bot = telegram.Bot(__bot_token)
     __lastServedUID = 0
@@ -103,6 +111,10 @@ class MyBot:
             if json['message'] != None:
                 MyBot.__chat_info = json['message']['chat']
                 MyBot.__message = json['message']['text']
+                try:
+                    MyBot.__messageEntities = json['message'].to_dict().get('entities')[0]
+                except:
+                    MyBot.__messageEntities = None
                 MyBot.__user_id = MyBot._getMemberInfo(latest_message)['id']
                 MyBot.__MessageId = json['message']['message_id']
                 MyBot.__repliedMessage = json['message']
@@ -138,24 +150,24 @@ class MyBot:
 
     @classmethod
     def ____replyToCommand(cls, chat_id, message):
-        if(message == '/start' or message == "/start"):
+        if('/start' in message):
             MyBot.__bot.sendChatAction(chat_id = MyBot.__chat_info['id'], action = telegram.ChatAction.TYPING)
             MyBot.__bot.sendMessage(chat_id, "Hello, Bot has been started!!!",reply_to_message_id = MyBot.__MessageId)
 
-        elif(message == '/help'):
+        elif('/help' in message):
             MyBot.__bot.sendChatAction(chat_id = MyBot.__chat_info['id'], action = telegram.ChatAction.TYPING)
             MyBot.__bot.sendMessage(chat_id, "/help - Help command \n/start - Start the bot \n/mirror <Download link to the file>: Mirror a file", reply_to_message_id = MyBot.__MessageId)
 
-        elif(message == '/mirror'):
+        elif('/mirror' in message):
             MyBot.__bot.sendChatAction(chat_id = MyBot.__chat_info['id'], action = telegram.ChatAction.TYPING)
             MyBot.__bot.sendMessage(chat_id, "This functionality has not been implemented yet!!!", reply_to_message_id = MyBot.__MessageId)
 
-        elif(message == '/authstatus'):
+        elif('/authstatus' in message):
             MyBot.__bot.sendChatAction(chat_id = MyBot.__chat_info['id'], action = telegram.ChatAction.TYPING)
             Auth_status = Authorization.auth_status(MyBot.__chat_info, MyBot._getReplyMemberInfo()['id'], MyBot.__authorised_people, MyBot.__owner_id)
             MyBot.__bot.sendMessage(chat_id, Auth_status, reply_to_message_id = MyBot.__MessageId)
 
-        elif(message == '/authorize'):
+        elif('/authorize' in message):
             MyBot.__bot.sendChatAction(chat_id = MyBot.__chat_info['id'], action = telegram.ChatAction.TYPING)
             if MyBot._getReplyMemberInfo() == None:
                 print(MyBot.__repliedMessage)
@@ -164,7 +176,7 @@ class MyBot:
                 Authorization_status = Authorization.authorize(MyBot.__chat_info, MyBot._getReplyMemberInfo()['id'], MyBot.__authorised_people, MyBot.__owner_id, MyBot.__user_id)
                 MyBot.__bot.sendMessage(chat_id, Authorization_status, reply_to_message_id = MyBot.__MessageId)
         
-        elif(message == '/unauthorize'):
+        elif('/unauthorize' in message):
             MyBot.__bot.sendChatAction(chat_id = MyBot.__chat_info['id'], action = telegram.ChatAction.TYPING)
             if MyBot._getReplyMemberInfo() == None:
                 MyBot.__bot.sendMessage(chat_id, "Reply to someone's message to unauthorize him.", reply_to_message_id = MyBot.__MessageId)
