@@ -99,12 +99,17 @@ class MyBot:
                 continue
 
             # MyBot.__repliedMessage = None
-            MyBot.__chat_info = json['message']['chat']
-            MyBot.__message = json['message']['text']
-            MyBot.__user_id = MyBot._getMemberInfo(latest_message)['id']
-            MyBot.__MessageId = json['message']['message_id']
+            
+            if json['message'] != None:
+                MyBot.__chat_info = json['message']['chat']
+                MyBot.__message = json['message']['text']
+                MyBot.__user_id = MyBot._getMemberInfo(latest_message)['id']
+                MyBot.__MessageId = json['message']['message_id']
+                MyBot.__repliedMessage = json['message']
+            else:
+                continue
+
             # if(json['message']['reply_to_message']!=None):
-            MyBot.__repliedMessage = json['message']
 
             MyBot.__reply()
             MyBot.__lastServedUID = UpdateID
@@ -134,30 +139,37 @@ class MyBot:
     @classmethod
     def ____replyToCommand(cls, chat_id, message):
         if(message == '/start' or message == "/start"):
+            MyBot.__bot.sendChatAction(chat_id = MyBot.__chat_info['id'], action = telegram.ChatAction.TYPING)
             MyBot.__bot.sendMessage(chat_id, "Hello, Bot has been started!!!",reply_to_message_id = MyBot.__MessageId)
 
         elif(message == '/help'):
+            MyBot.__bot.sendChatAction(chat_id = MyBot.__chat_info['id'], action = telegram.ChatAction.TYPING)
             MyBot.__bot.sendMessage(chat_id, "/help - Help command \n/start - Start the bot \n/mirror <Download link to the file>: Mirror a file", reply_to_message_id = MyBot.__MessageId)
 
         elif(message == '/mirror'):
+            MyBot.__bot.sendChatAction(chat_id = MyBot.__chat_info['id'], action = telegram.ChatAction.TYPING)
             MyBot.__bot.sendMessage(chat_id, "This functionality has not been implemented yet!!!", reply_to_message_id = MyBot.__MessageId)
 
         elif(message == '/authstatus'):
+            MyBot.__bot.sendChatAction(chat_id = MyBot.__chat_info['id'], action = telegram.ChatAction.TYPING)
             Auth_status = Authorization.auth_status(MyBot.__chat_info, MyBot._getReplyMemberInfo()['id'], MyBot.__authorised_people, MyBot.__owner_id)
             MyBot.__bot.sendMessage(chat_id, Auth_status, reply_to_message_id = MyBot.__MessageId)
 
         elif(message == '/authorize'):
+            MyBot.__bot.sendChatAction(chat_id = MyBot.__chat_info['id'], action = telegram.ChatAction.TYPING)
             if MyBot._getReplyMemberInfo() == None:
+                print(MyBot.__repliedMessage)
                 MyBot.__bot.sendMessage(chat_id, "Reply to someone's message to authorize him.", reply_to_message_id = MyBot.__MessageId)
             else:
-                Authorization_status = Authorization.authorize(MyBot.__chat_info, MyBot._getReplyMemberInfo()['id'], MyBot.__authorised_people, MyBot.__owner_id)
+                Authorization_status = Authorization.authorize(MyBot.__chat_info, MyBot._getReplyMemberInfo()['id'], MyBot.__authorised_people, MyBot.__owner_id, MyBot.__user_id)
                 MyBot.__bot.sendMessage(chat_id, Authorization_status, reply_to_message_id = MyBot.__MessageId)
         
         elif(message == '/unauthorize'):
+            MyBot.__bot.sendChatAction(chat_id = MyBot.__chat_info['id'], action = telegram.ChatAction.TYPING)
             if MyBot._getReplyMemberInfo() == None:
                 MyBot.__bot.sendMessage(chat_id, "Reply to someone's message to unauthorize him.", reply_to_message_id = MyBot.__MessageId)
             else:
-                Authorization_status = Authorization.unauthorize(MyBot.__chat_info, MyBot._getReplyMemberInfo()['id'], MyBot.__authorised_people, MyBot.__owner_id)
+                Authorization_status = Authorization.unauthorize(MyBot.__chat_info, MyBot._getReplyMemberInfo()['id'], MyBot.__authorised_people, MyBot.__owner_id, MyBot.__user_id)
                 MyBot.__bot.sendMessage(chat_id, Authorization_status, reply_to_message_id = MyBot.__MessageId)
         
 
