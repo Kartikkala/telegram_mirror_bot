@@ -2,28 +2,21 @@ import telegram
 import threading
 from time import sleep
 from authorization import Authorization
-import yaml
-
-class LoadConfig:
-    @classmethod
-    def getBotToken(cls, configFilePath):
-        with open(configFilePath, 'r') as configFile:
-            config = yaml.load(configFile, Loader=yaml.FullLoader)
-            return config['botToken']
-
+from configLoader import LoadConfig
 
 
 class MyBot:
-    __LastServedUIDfile = 'LSUID'
-    __bot_token= LoadConfig.getBotToken('config.yml')
+    __configFilePath = 'config.yml'
+    __LastServedUIDfile = 'LSUID.json'
+    __bot_token= LoadConfig.BotToken(__configFilePath)
     __update_list = []
     __bot = telegram.Bot(__bot_token)
-    __lastServedUID = 0
+    __lastServedUIDDict = {}
     __authorised_people = {-1001358301916:[1239653417,1972073012]}
 
     #Chat info
 
-    __owner_id = 1239653417
+    __owner_id = LoadConfig.ownerId(__configFilePath)
     __chat_info = {}
     __message = ''
     __MessageId = 0
@@ -34,6 +27,13 @@ class MyBot:
     @classmethod
     def _getMemberInfo(cls, index):                  #Extracts all info about user from chat (return type:dictinoary)
         return MyBot.__update_list[index]['message'].to_dict().get('from')
+
+    @classmethod
+    def __getChatId(cls, format=1):
+        if format ==1:
+            return str(MyBot.__chat_info['id'])
+        else:
+            return int(MyBot.__chat_info['id'])
     
     
     @classmethod
@@ -49,23 +49,24 @@ class MyBot:
         return MyBot.__update_list
 
     @classmethod
-    def _getLastServedUID(cls):                     #Returns last served Update ID
-        return MyBot.__lastServedUID
+    def _getLastServedUID(cls, chatId):                     #Returns last served Update ID
+        try:
+            return MyBot.__lastServedUIDDict[chatId]
+        except:
+            return 0
 
     @classmethod
     def readLastServedUID(cls):
         try:
-            with open(MyBot.__LastServedUIDfile, 'r+') as LSUIDf:
-                MyBot.__lastServedUID = int(LSUIDf.read())
+            MyBot.__lastServedUIDDict = Authorization.readData(MyBot.__LastServedUIDfile, MyBot.__lastServedUIDDict)
         except:
             with open(MyBot.__LastServedUIDfile, 'w+') as LSUIDf:
                 print("File created for first time use.")
     
 
     @classmethod
-    def writeLastServedUID(cls, LastServedUID):
-        with open(MyBot.__LastServedUIDfile, 'w+') as LSUIDf:
-            LSUIDf.write(str(LastServedUID))
+    def writeLastServedUID(cls,UpdateId,chatId):
+        Authorization.writeData(MyBot.__LastServedUIDfile, MyBot.__lastServedUIDDict)
     
 
     @classmethod                                    #Returns JSON/Dictionary at a particular index in the Update list returned by Telegram API
@@ -78,20 +79,23 @@ class MyBot:
         return len(MyBot.__update_list)
 
 
-    @classmethod                                    #Updates the update list by latest update, removes everything before last served Update ID
+    @classmethod                              
     def __latestUpdate(cls):
-        MyBot.__update_list = MyBot.__bot.getUpdates(offset = MyBot._getLastServedUID(), timeout = 2) 
+        try:                                 
+            MyBot.__update_list = MyBot.__bot.getUpdates(offset = MyBot._getLastServedUID(MyBot.__getChatId(1)), timeout = 2)    
+        except:                                     #When the last update Id file is NOT present and dictionary is NOT loaded from that file
+             MyBot.__update_list = MyBot.__bot.getUpdates(timeout = 2)
     
     
-    @classmethod                                    #Starts polling on telegram bot API
+    @classmethod                     
     def startUpdatePolling(cls):
         MyBot.__authorised_people = Authorization.readData('authorized_users.json',MyBot.__authorised_people)
         MyBot.readLastServedUID()
-        print(f"Bot started... Last served UID: {MyBot.__lastServedUID}\n")
+        print("Bot started...")
         while(1):
             MyBot.__latestUpdate()
             sleep(0.5)
-            
+
 
     
     @classmethod                                    #Parse the latest Update dictionary from telegram API, extracts info to class variables
@@ -103,11 +107,6 @@ class MyBot:
             latest_message = MyBot.List_Len()-1
             json = MyBot._getJSON(latest_message)
             UpdateID = json['update_id']
-            if(UpdateID == MyBot._getLastServedUID()):
-                continue
-
-            # MyBot.__repliedMessage = None
-            
             if json['message'] != None:
                 MyBot.__chat_info = json['message']['chat']
                 MyBot.__message = json['message']['text']
@@ -120,14 +119,15 @@ class MyBot:
                 MyBot.__repliedMessage = json['message']
             else:
                 continue
-
-            # if(json['message']['reply_to_message']!=None):
+            
+            if(UpdateID == MyBot._getLastServedUID(MyBot.__getChatId(1))):
+                continue
 
             MyBot.__reply()
-            MyBot.__lastServedUID = UpdateID
-            MyBot.writeLastServedUID(MyBot.__lastServedUID)
+            MyBot.__lastServedUIDDict[MyBot.__getChatId(1)] = UpdateID
+            MyBot.writeLastServedUID(UpdateID, MyBot.__chat_info['id'])
             print(f"Incoming: {MyBot.__user_id}")
-            print(f"Parsing...{UpdateID} | Message: {MyBot.__message} | Last served UID: {MyBot._getLastServedUID()}",end = '\n')
+            print(f"Parsing...{UpdateID} | Message: {MyBot.__message} | Last served UID: {MyBot._getLastServedUID(MyBot.__getChatId(1))}",end = '\n')
 
     @classmethod                                    #Replies to a chat after checking if chat is authorised or not
     def __reply(cls):                               
