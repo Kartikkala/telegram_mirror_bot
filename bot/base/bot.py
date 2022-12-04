@@ -4,11 +4,13 @@ from time import sleep
 from authorization import Authorization
 from configLoader import LoadConfig
 from time import time
+import os
 
 
 class MyBot:
-    __configFilePath = 'config.yml'
-    __LastServedUIDfile = 'LSUID.json'
+    __configFilePath = os.path.join(os.getcwd(),"config.yml")
+    __LastServedUIDfile = os.path.join(os.getcwd(),"bot/base/resourceFiles/LSUID.json")
+    _authorized_file = os.path.join(os.getcwd(),"bot/base/resourceFiles/authorized_users.json")
     __bot_token= LoadConfig.BotToken(__configFilePath)
     __update_list = []
     __bot = telegram.Bot(__bot_token)
@@ -69,7 +71,7 @@ class MyBot:
     
     @classmethod                     
     def startUpdatePolling(cls):
-        MyBot.__authorised_people = Authorization.readData('authorized_users.json',MyBot.__authorised_people)
+        MyBot.__authorised_people = Authorization.readData(MyBot._authorized_file,MyBot.__authorised_people)
         MyBot.readLastServedUID()
         print("Bot started...")
         while(1):
@@ -123,7 +125,7 @@ class MyBot:
     def __replyToMessage(cls, updateDictionary):
         latestMessageInfo = MyBot.__messageInfo(updateDictionary)
         if('reply_to_message' in latestMessageInfo):
-            return latestMessageInfo.to_dict().get('reply_to_message')
+            return latestMessageInfo.get('reply_to_message')
 
         else:
             return None
@@ -134,7 +136,7 @@ class MyBot:
         if(replyToMessageInfo == None):
             return None
         else:
-            return replyToMessageInfo.to_dict().get('from')
+            return replyToMessageInfo.get('from')
 
     @classmethod
     def __replyMemberId(cls, updateDictionary):
@@ -197,6 +199,7 @@ class MyBot:
         messageID = MyBot.__messageId(updateDictionary)
         chatInfo = MyBot.__chatInfo(updateDictionary)
         userId = MyBot.__userId(updateDictionary)
+        repliedMessageUserID = MyBot.__replyMemberId(updateDictionary)
 
         if('/start' in messageText):
             MyBot.__bot.sendChatAction(chat_id = chatId, action = telegram.ChatAction.TYPING)
@@ -212,23 +215,27 @@ class MyBot:
 
         elif('/authstatus' in messageText):
             MyBot.__bot.sendChatAction(chat_id = chatId, action = telegram.ChatAction.TYPING)
-            Auth_status = Authorization.auth_status(chatInfo, MyBot.__replyMemberId(updateDictionary), MyBot.__authorised_people, MyBot.__owner_id)
-            MyBot.__bot.sendMessage(chatId, Auth_status, reply_to_message_id = messageID)
+            if MyBot.__replyMemberInfo(updateDictionary) == None:
+                MyBot.__bot.sendMessage(chatId, "Reply to someone's message to check authorization status.", reply_to_message_id = messageID)
+            else:
+                Auth_status = Authorization.auth_status(chatInfo, MyBot.__replyMemberId(updateDictionary), MyBot.__authorised_people, MyBot.__owner_id)
+                MyBot.__bot.sendMessage(chatId, Auth_status, reply_to_message_id = messageID)
+            
 
         elif('/authorize' in messageText):
             MyBot.__bot.sendChatAction(chat_id = chatId, action = telegram.ChatAction.TYPING)
-            if MyBot.__replyMemberInfo() == None:
+            if MyBot.__replyMemberInfo(updateDictionary) == None:
                 MyBot.__bot.sendMessage(chatId, "Reply to someone's message to authorize him.", reply_to_message_id = messageID)
             else:
-                Authorization_status = Authorization.authorize(chatInfo, MyBot.__replyMemberId(updateDictionary), MyBot.__authorised_people, MyBot.__owner_id, userId)
+                Authorization_status = Authorization.authorize(chatInfo, repliedMessageUserID, MyBot.__authorised_people, MyBot.__owner_id, userId)
                 MyBot.__bot.sendMessage(chatId, Authorization_status, reply_to_message_id = messageID)
         
         elif('/unauthorize' in messageText):
             MyBot.__bot.sendChatAction(chat_id = chatId, action = telegram.ChatAction.TYPING)
-            if MyBot.__replyMemberInfo() == None:
+            if MyBot.__replyMemberInfo(updateDictionary) == None:
                 MyBot.__bot.sendMessage(chatId, "Reply to someone's message to unauthorize him.", reply_to_message_id = messageID)
             else:
-                Authorization_status = Authorization.unauthorize(chatInfo, MyBot.__replyMemberId(updateDictionary), MyBot.__authorised_people, MyBot.__owner_id, userId)
+                Authorization_status = Authorization.unauthorize(chatInfo, repliedMessageUserID, MyBot.__authorised_people, MyBot.__owner_id, userId)
                 MyBot.__bot.sendMessage(chatId, Authorization_status, reply_to_message_id = messageID)
 
         elif('/ping' in messageText):

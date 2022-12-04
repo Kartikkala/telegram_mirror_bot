@@ -1,6 +1,9 @@
 import json
+import os
 class Authorization:
-    _authorized_file = 'authorized_users.json'
+    _authorized_file = os.path.join(os.getcwd(),"bot/base/resourceFiles/authorized_users.json")
+    print(_authorized_file)
+
     @classmethod
     def isGroupChat(cls, chat_info):                    #Returns true of chat is a group chat, else returns false
         if(chat_info['type'] == 'private'):
@@ -76,7 +79,7 @@ class Authorization:
 
 
         if(user_id == owner_id):
-            if(Authorization.isAuthorized(chat_info,user_id,allowedDictionary_List,owner_id)):
+            if(Authorization.isAuthorized(chat_info,target_user_id,allowedDictionary_List,owner_id)):
                 return "This person is already authorized"
             else:
                 Authorization.readData(Authorization._authorized_file, allowedDictionary_List)
@@ -91,7 +94,7 @@ class Authorization:
         chat_id= str(chat_info['id'])
 
         if(user_id == owner_id):
-            if(Authorization.isAuthorized(chat_info,user_id,allowedDictionary_List,owner_id)):
+            if(Authorization.isAuthorized(chat_info,target_user_id,allowedDictionary_List,owner_id)):
                 Authorization.readData(Authorization._authorized_file, allowedDictionary_List)
                 allowedDictionary_List[chat_id].remove(target_user_id)
                 Authorization.writeData(Authorization._authorized_file, allowedDictionary_List)
