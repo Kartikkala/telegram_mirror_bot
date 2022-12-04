@@ -3,6 +3,7 @@ import threading
 from time import sleep
 from authorization import Authorization
 from configLoader import LoadConfig
+from time import time
 
 
 class MyBot:
@@ -18,7 +19,6 @@ class MyBot:
 
     __owner_id = LoadConfig.ownerId(__configFilePath)
     __latestUpdateDict = {}
-    __repliedMessage ={}
 
 
 
@@ -114,6 +114,10 @@ class MyBot:
     @classmethod
     def __messageId(cls, updateDictionary):
         return MyBot.__messageInfo(updateDictionary)['message_id']
+
+    @classmethod
+    def __sentMessageId(cls, sentMessageDictionary):
+        return sentMessageDictionary.get('message_id')
     
     @classmethod
     def __replyToMessage(cls, updateDictionary):
@@ -147,7 +151,7 @@ class MyBot:
 
     
     @classmethod                                    #Parse the latest Update dictionary from telegram API, extracts info to class variables
-    def parse(cls):                     
+    def parseLatestUpdates(cls):                     
         while(1):
             while(MyBot.List_Len()==0):
                 sleep(0.5)
@@ -214,7 +218,6 @@ class MyBot:
         elif('/authorize' in messageText):
             MyBot.__bot.sendChatAction(chat_id = chatId, action = telegram.ChatAction.TYPING)
             if MyBot.__replyMemberInfo() == None:
-                print(MyBot.__repliedMessage)
                 MyBot.__bot.sendMessage(chatId, "Reply to someone's message to authorize him.", reply_to_message_id = messageID)
             else:
                 Authorization_status = Authorization.authorize(chatInfo, MyBot.__replyMemberId(updateDictionary), MyBot.__authorised_people, MyBot.__owner_id, userId)
@@ -227,6 +230,17 @@ class MyBot:
             else:
                 Authorization_status = Authorization.unauthorize(chatInfo, MyBot.__replyMemberId(updateDictionary), MyBot.__authorised_people, MyBot.__owner_id, userId)
                 MyBot.__bot.sendMessage(chatId, Authorization_status, reply_to_message_id = messageID)
+
+        elif('/ping' in messageText):
+            MyBot.__bot.sendChatAction(chat_id = chatId, action = telegram.ChatAction.TYPING)
+            startTime = int(time() * 1000)
+            sentMessage = MyBot.__bot.sendMessage(chatId, "Calculating latency...", reply_to_message_id = messageID)
+            endTime = int(time() * 1000)
+            diffenceInTime = endTime-startTime
+            sentMessage = sentMessage.to_dict()
+            sentMessageID = MyBot.__sentMessageId(sentMessage)
+            MyBot.__bot.editMessageText(chat_id=chatId,message_id=sentMessageID,text=f'latency: {diffenceInTime} ms')
+            
         
 
     @classmethod
@@ -236,7 +250,7 @@ class MyBot:
 
 
 thread1 = threading.Thread(target = MyBot.startUpdatePolling)
-thread2 = threading.Thread(target = MyBot.parse)
+thread2 = threading.Thread(target = MyBot.parseLatestUpdates)
 
 
 thread1.start()
