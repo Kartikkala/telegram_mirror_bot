@@ -1,8 +1,8 @@
 import telegram
 import threading
 from time import sleep
-from authorization import Authorization
-from configLoader import LoadConfig
+from base.authorization import Authorization
+from base.configLoader import LoadConfig
 from time import time
 import os
 
@@ -254,14 +254,3 @@ class MyBot:
     def ____replyToChat(cls, updateDictionary):
         pass
 
-
-
-thread1 = threading.Thread(target = MyBot.startUpdatePolling)
-thread2 = threading.Thread(target = MyBot.parseLatestUpdates)
-
-
-thread1.start()
-thread2.start()
-
-
-    
