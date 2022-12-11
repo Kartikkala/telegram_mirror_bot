@@ -3,6 +3,7 @@ import threading
 from time import sleep
 from base.authorization import Authorization
 from base.configLoader import LoadConfig
+import base.commands
 from time import time
 import os
 
@@ -13,13 +14,13 @@ class MyBot:
     _authorized_file = os.path.join(os.getcwd(),"bot/base/resourceFiles/authorized_users.json")
     __bot_token= LoadConfig.BotToken(__configFilePath)
     __update_list = []
-    __bot = telegram.Bot(__bot_token)
     __lastServedUIDDict = {}
-    __authorised_people = {-1001358301916:[1239653417,1972073012]}
+    bot = telegram.Bot(__bot_token)
+    authorised_people = {-1001358301916:[1239653417,1972073012]}
 
     #Chat info
 
-    __owner_id = LoadConfig.ownerId(__configFilePath)
+    owner_id = LoadConfig.ownerId(__configFilePath)
     __latestUpdateDict = {}
 
 
@@ -30,7 +31,7 @@ class MyBot:
 
     @classmethod
     def lastServedUID(cls, updateDictionary):                     #Returns last served Update ID
-        chatId = MyBot.__chatId(updateDictionary)
+        chatId = MyBot.chatId(updateDictionary)
         chatId = str(chatId)
         if(chatId in MyBot.__lastServedUIDDict):
             return MyBot.__lastServedUIDDict[chatId]
@@ -64,14 +65,14 @@ class MyBot:
     @classmethod                              
     def __latestUpdate(cls):
         try:                                 
-            MyBot.__update_list = MyBot.__bot.getUpdates(offset = MyBot.lastServedUID(MyBot.__latestUpdateDict), timeout = 2)    
+            MyBot.__update_list = MyBot.bot.getUpdates(offset = MyBot.lastServedUID(MyBot.__latestUpdateDict), timeout = 2)    
         except:                                    #When the last update Id file is NOT present and dictionary is NOT loaded from that file
-             MyBot.__update_list = MyBot.__bot.getUpdates(timeout = 2)
+             MyBot.__update_list = MyBot.bot.getUpdates(timeout = 2)
     
     
     @classmethod                     
     def startUpdatePolling(cls):
-        MyBot.__authorised_people = Authorization.readData(MyBot._authorized_file,MyBot.__authorised_people)
+        MyBot.authorised_people = Authorization.readData(MyBot._authorized_file,MyBot.authorised_people)
         MyBot.readLastServedUID()
         print("Bot started...")
         while(1):
@@ -80,29 +81,38 @@ class MyBot:
 
 
     @classmethod
-    def _memberInfo(cls, updateDictionary):                  #Extracts all info about user from chat (return type:dictinoary)
-        return updateDictionary['message'].get('from')
+    def memberInfo(cls, updateDictionary):                  #Extracts all info about user from chat (return type:dictinoary)
+        if 'message' in updateDictionary:
+            return updateDictionary['message'].get('from')
+        else:
+            return updateDictionary['edited_message'].get('from')
 
     
     @classmethod
-    def __chatInfo(cls, updateDictionary):
-        return updateDictionary['message']['chat']
+    def chatInfo(cls, updateDictionary):
+        if 'message' in updateDictionary:
+            return updateDictionary['message']['chat']
+        else:
+            return updateDictionary['edited_message']['chat']
 
     @classmethod
-    def __chatId(cls, updateDictionary):
-        return MyBot.__chatInfo(updateDictionary)['id']
+    def chatId(cls, updateDictionary):
+        return MyBot.chatInfo(updateDictionary)['id']
 
     @classmethod
-    def __updateId(cls, updateDictionary):
+    def updateId(cls, updateDictionary):
         return updateDictionary['update_id']
     
     @classmethod
-    def __messageInfo(cls, updateDictionary):
-        return updateDictionary['message']
+    def messageInfo(cls, updateDictionary):
+        if 'message' in updateDictionary:
+            return updateDictionary['message']
+        else:
+            return updateDictionary['edited_message']
 
     @classmethod
-    def __messageContent(cls, updateDictionary):
-        latestMessageInfo = MyBot.__messageInfo(updateDictionary)
+    def messageContent(cls, updateDictionary):
+        latestMessageInfo = MyBot.messageInfo(updateDictionary)
         latestMessageInfoKeys = latestMessageInfo.keys()
         if 'text' in latestMessageInfoKeys:
             return latestMessageInfo['text']
@@ -110,20 +120,20 @@ class MyBot:
             return None
 
     @classmethod
-    def __userId(cls, updateDictionary):
-        return MyBot._memberInfo(updateDictionary)['id']
+    def userId(cls, updateDictionary):
+        return MyBot.memberInfo(updateDictionary)['id']
 
     @classmethod
-    def __messageId(cls, updateDictionary):
-        return MyBot.__messageInfo(updateDictionary)['message_id']
+    def messageId(cls, updateDictionary):
+        return MyBot.messageInfo(updateDictionary)['message_id']
 
     @classmethod
-    def __sentMessageId(cls, sentMessageDictionary):
+    def sentMessageId(cls, sentMessageDictionary):
         return sentMessageDictionary.get('message_id')
     
     @classmethod
-    def __replyToMessage(cls, updateDictionary):
-        latestMessageInfo = MyBot.__messageInfo(updateDictionary)
+    def replyToMessage(cls, updateDictionary):
+        latestMessageInfo = MyBot.messageInfo(updateDictionary)
         if('reply_to_message' in latestMessageInfo):
             return latestMessageInfo.get('reply_to_message')
 
@@ -131,16 +141,16 @@ class MyBot:
             return None
 
     @classmethod
-    def __replyMemberInfo(cls, updateDictionary):
-        replyToMessageInfo = MyBot.__replyToMessage(updateDictionary)
+    def replyMemberInfo(cls, updateDictionary):
+        replyToMessageInfo = MyBot.replyToMessage(updateDictionary)
         if(replyToMessageInfo == None):
             return None
         else:
             return replyToMessageInfo.get('from')
 
     @classmethod
-    def __replyMemberId(cls, updateDictionary):
-        replyMemberInfo = MyBot.__replyMemberInfo(updateDictionary)
+    def replyMemberId(cls, updateDictionary):
+        replyMemberInfo = MyBot.replyMemberInfo(updateDictionary)
         if(replyMemberInfo == None):
             return None
         else:
@@ -148,7 +158,7 @@ class MyBot:
 
     @classmethod
     def __updateLastServedUIDDictionary(cls, latestUpdateDictionary):
-        MyBot.__lastServedUIDDict[str(MyBot.__chatId(latestUpdateDictionary))] = MyBot.__updateId(latestUpdateDictionary)
+        MyBot.__lastServedUIDDict[str(MyBot.chatId(latestUpdateDictionary))] = MyBot.updateId(latestUpdateDictionary)
         return
 
     
@@ -163,18 +173,18 @@ class MyBot:
             updateJson = MyBot.__updateAtIndex(latestMessageIndex)
             MyBot.__latestUpdateDict = updateJson.to_dict()
             
-            if(MyBot.__updateId(MyBot.__latestUpdateDict) == MyBot.lastServedUID(MyBot.__latestUpdateDict)):
+            if(MyBot.updateId(MyBot.__latestUpdateDict) == MyBot.lastServedUID(MyBot.__latestUpdateDict)):
                 continue
 
             MyBot.__reply(MyBot.__latestUpdateDict)
             MyBot.__updateLastServedUIDDictionary(MyBot.__latestUpdateDict)
             MyBot.writeLastServedUID()
-            print(f"Incoming: {MyBot.__userId(MyBot.__latestUpdateDict)}")
-            print(f"Parsing...{MyBot.__updateId(MyBot.__latestUpdateDict)} | Message: {MyBot.__messageContent(MyBot.__latestUpdateDict)}",end = '\n')
+            print(f"Incoming: {MyBot.userId(MyBot.__latestUpdateDict)}")
+            print(f"Parsing...{MyBot.updateId(MyBot.__latestUpdateDict)} | Message: {MyBot.messageContent(MyBot.__latestUpdateDict)}",end = '\n')
 
     @classmethod                                    #Replies to a chat after checking if chat is authorised or not
     def __reply(cls, updateDictionary):                               
-        if ( Authorization.isAuthorized(MyBot.__chatInfo(updateDictionary), MyBot.__userId(updateDictionary), MyBot.__authorised_people, MyBot.__owner_id) ):
+        if ( Authorization.isAuthorized(MyBot.chatInfo(updateDictionary), MyBot.userId(updateDictionary), MyBot.authorised_people, MyBot.owner_id) ):
             MyBot.__categorizeAnd__reply(updateDictionary)
             print(f"Is authorized.")
         else:
@@ -182,71 +192,16 @@ class MyBot:
 
     @classmethod                                    #Replies to a chat on the basis of Commands or normal chats
     def __categorizeAnd__reply(cls,updateDictionary):
-        messageText = MyBot.__messageContent(updateDictionary)
+        messageText = MyBot.messageContent(updateDictionary)
         try:
             if(messageText[0] == '/'):
-                MyBot.____replyToCommand(updateDictionary)
+                base.commands.Commands.replyToCommand(updateDictionary)
             else:
-                MyBot.____replyToChat(updateDictionary)
+                    MyBot.____replyToChat(updateDictionary)
         except:
             print("My man is sending stickers :)")
 
 
-    @classmethod
-    def ____replyToCommand(cls, updateDictionary):
-        messageText = MyBot.__messageContent(updateDictionary)
-        chatId = MyBot.__chatId(updateDictionary)
-        messageID = MyBot.__messageId(updateDictionary)
-        chatInfo = MyBot.__chatInfo(updateDictionary)
-        userId = MyBot.__userId(updateDictionary)
-        repliedMessageUserID = MyBot.__replyMemberId(updateDictionary)
-
-        if('/start' in messageText):
-            MyBot.__bot.sendChatAction(chat_id = chatId, action = telegram.ChatAction.TYPING)
-            MyBot.__bot.sendMessage(chatId, "Hello, Bot has been started!!!",reply_to_message_id = messageID)
-
-        elif('/help' in messageText):
-            MyBot.__bot.sendChatAction(chat_id = chatId, action = telegram.ChatAction.TYPING)
-            MyBot.__bot.sendMessage(chatId, "/help - Help command \n/start - Start the bot \n/mirror <Download link to the file>: Mirror a file", reply_to_message_id = messageID)
-
-        elif('/mirror' in messageText):
-            MyBot.__bot.sendChatAction(chat_id = chatId, action = telegram.ChatAction.TYPING)
-            MyBot.__bot.sendMessage(chatId, "This functionality has not been implemented yet!!!", reply_to_message_id = messageID)
-
-        elif('/authstatus' in messageText):
-            MyBot.__bot.sendChatAction(chat_id = chatId, action = telegram.ChatAction.TYPING)
-            if MyBot.__replyMemberInfo(updateDictionary) == None:
-                MyBot.__bot.sendMessage(chatId, "Reply to someone's message to check authorization status.", reply_to_message_id = messageID)
-            else:
-                Auth_status = Authorization.auth_status(chatInfo, MyBot.__replyMemberId(updateDictionary), MyBot.__authorised_people, MyBot.__owner_id)
-                MyBot.__bot.sendMessage(chatId, Auth_status, reply_to_message_id = messageID)
-            
-
-        elif('/authorize' in messageText):
-            MyBot.__bot.sendChatAction(chat_id = chatId, action = telegram.ChatAction.TYPING)
-            if MyBot.__replyMemberInfo(updateDictionary) == None:
-                MyBot.__bot.sendMessage(chatId, "Reply to someone's message to authorize him.", reply_to_message_id = messageID)
-            else:
-                Authorization_status = Authorization.authorize(chatInfo, repliedMessageUserID, MyBot.__authorised_people, MyBot.__owner_id, userId)
-                MyBot.__bot.sendMessage(chatId, Authorization_status, reply_to_message_id = messageID)
-        
-        elif('/unauthorize' in messageText):
-            MyBot.__bot.sendChatAction(chat_id = chatId, action = telegram.ChatAction.TYPING)
-            if MyBot.__replyMemberInfo(updateDictionary) == None:
-                MyBot.__bot.sendMessage(chatId, "Reply to someone's message to unauthorize him.", reply_to_message_id = messageID)
-            else:
-                Authorization_status = Authorization.unauthorize(chatInfo, repliedMessageUserID, MyBot.__authorised_people, MyBot.__owner_id, userId)
-                MyBot.__bot.sendMessage(chatId, Authorization_status, reply_to_message_id = messageID)
-
-        elif('/ping' in messageText):
-            MyBot.__bot.sendChatAction(chat_id = chatId, action = telegram.ChatAction.TYPING)
-            startTime = int(time() * 1000)
-            sentMessage = MyBot.__bot.sendMessage(chatId, "Calculating latency...", reply_to_message_id = messageID)
-            endTime = int(time() * 1000)
-            diffenceInTime = endTime-startTime
-            sentMessage = sentMessage.to_dict()
-            sentMessageID = MyBot.__sentMessageId(sentMessage)
-            MyBot.__bot.editMessageText(chat_id=chatId,message_id=sentMessageID,text=f'latency: {diffenceInTime} ms')
             
         
 
