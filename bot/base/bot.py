@@ -186,7 +186,7 @@ class MyBot:
     def __reply(cls, updateDictionary):                               
         if ( Authorization.isAuthorized(MyBot.chatInfo(updateDictionary), MyBot.userId(updateDictionary), MyBot.authorised_people, MyBot.owner_id) ):
             MyBot.__categorizeAnd__reply(updateDictionary)
-            print(f"Is authorized.")
+            print("Is authorized.")
         else:
             print("Is not authorized")
 
@@ -198,8 +198,8 @@ class MyBot:
                 base.commands.Commands.replyToCommand(updateDictionary)
             else:
                     MyBot.____replyToChat(updateDictionary)
-        except:
-            print("My man is sending stickers :)")
+        except Exception as e:
+            print(e)
 
 
             

@@ -1,4 +1,4 @@
-from base import *
+from base import MyBot
 import threading
 
 thread1 = threading.Thread(target = MyBot.startUpdatePolling)
