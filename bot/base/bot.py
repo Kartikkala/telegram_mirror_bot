@@ -1,12 +1,15 @@
 import telegram
-import threading
+# import threading
 from time import sleep
-from base.authorization import Authorization
-from base.configLoader import LoadConfig
+import base.authorization
+import base.configLoader
 import base.commands
-from time import time
+# from time import time
 import os
 
+
+Authorization = base.authorization.Authorization
+LoadConfig = base.configLoader.LoadConfig
 
 class MyBot:
     __configFilePath = os.path.join(os.getcwd(),"config.yml")
@@ -21,7 +24,7 @@ class MyBot:
     #Chat info
 
     owner_id = LoadConfig.ownerId(__configFilePath)
-    __latestUpdateDict = {}
+    latestUpdateDict = {}
 
 
 
@@ -65,7 +68,7 @@ class MyBot:
     @classmethod                              
     def __latestUpdate(cls):
         try:                                 
-            MyBot.__update_list = MyBot.bot.getUpdates(offset = MyBot.lastServedUID(MyBot.__latestUpdateDict), timeout = 2)    
+            MyBot.__update_list = MyBot.bot.getUpdates(offset = MyBot.lastServedUID(MyBot.latestUpdateDict), timeout = 2)    
         except:                                    #When the last update Id file is NOT present and dictionary is NOT loaded from that file
              MyBot.__update_list = MyBot.bot.getUpdates(timeout = 2)
     
@@ -171,16 +174,16 @@ class MyBot:
         
             latestMessageIndex = MyBot.List_Len()-1
             updateJson = MyBot.__updateAtIndex(latestMessageIndex)
-            MyBot.__latestUpdateDict = updateJson.to_dict()
+            MyBot.latestUpdateDict = updateJson.to_dict()
             
-            if(MyBot.updateId(MyBot.__latestUpdateDict) == MyBot.lastServedUID(MyBot.__latestUpdateDict)):
+            if(MyBot.updateId(MyBot.latestUpdateDict) == MyBot.lastServedUID(MyBot.latestUpdateDict)):
                 continue
 
-            MyBot.__reply(MyBot.__latestUpdateDict)
-            MyBot.__updateLastServedUIDDictionary(MyBot.__latestUpdateDict)
+            MyBot.__reply(MyBot.latestUpdateDict)
+            MyBot.__updateLastServedUIDDictionary(MyBot.latestUpdateDict)
             MyBot.writeLastServedUID()
-            print(f"Incoming: {MyBot.userId(MyBot.__latestUpdateDict)}")
-            print(f"Parsing...{MyBot.updateId(MyBot.__latestUpdateDict)} | Message: {MyBot.messageContent(MyBot.__latestUpdateDict)}",end = '\n')
+            print(f"Incoming: {MyBot.userId(MyBot.latestUpdateDict)}")
+            print(f"Parsing...{MyBot.updateId(MyBot.latestUpdateDict)} | Message: {MyBot.messageContent(MyBot.latestUpdateDict)}",end = '\n')
 
     @classmethod                                    #Replies to a chat after checking if chat is authorised or not
     def __reply(cls, updateDictionary):                               
@@ -200,6 +203,10 @@ class MyBot:
                     MyBot.____replyToChat(updateDictionary)
         except Exception as e:
             print(e)
+
+    @classmethod
+    def getUpdateDictionary(cls):
+        return MyBot.latestUpdateDict
 
 
             

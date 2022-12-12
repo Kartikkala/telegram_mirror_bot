@@ -1,7 +1,7 @@
 import base.bot
 import base.authorization
 import telegram
-import time
+from time import time
 from utils.download_utils.downloader import Download
 import multiprocessing
 
@@ -9,6 +9,28 @@ MAX_LOOP = 10
 
 
 class Commands:
+
+    updateDictionary = {}        #To make sure that this is never empty
+    messageText = ''
+    chatId = 0
+    messageID = 0
+    chatInfo = {}
+    userId = 0
+    repliedMessageUserID = 0
+
+
+    @classmethod
+    def updateClassInformation(cls, newUpdateDictionary):
+        cls.updateDictionary = newUpdateDictionary
+        cls.messageText = base.bot.MyBot.messageContent(cls.updateDictionary)
+        cls.chatId = base.bot.MyBot.chatId(cls.updateDictionary)
+        cls.messageID = base.bot.MyBot.messageId(cls.updateDictionary)
+        cls.chatInfo = base.bot.MyBot.chatInfo(cls.updateDictionary)
+        cls.userId = base.bot.MyBot.userId(cls.updateDictionary)
+        cls.repliedMessageUserID = base.bot.MyBot.replyMemberId(cls.updateDictionary)
+        return
+
+
     @classmethod
     def sendDownloadInfo(cls, gid, sentMessage_ID, chat_Id):
          while(1):
@@ -18,107 +40,114 @@ class Commands:
                 except:
                     pass
 
+    @classmethod
+    def authstatus(cls):
+        base.bot.MyBot.bot.sendChatAction(chat_id = cls.chatId, action = telegram.ChatAction.TYPING)
+        if base.bot.MyBot.replyMemberInfo(cls.updateDictionary) == None:
+            base.bot.MyBot.bot.sendMessage(cls.chatId, "Reply to someone's message to check authorization status.", reply_to_message_id = cls.messageID)
+        else:
+            Auth_status = base.authorization.Authorization.auth_status(cls.chatInfo, base.bot.MyBot.replyMemberId(cls.updateDictionary), base.bot.MyBot.authorised_people, base.bot.MyBot.owner_id)
+            base.bot.MyBot.bot.sendMessage(cls.chatId, Auth_status, reply_to_message_id = cls.messageID)
+
+    @classmethod
+    def authorize(cls):
+        base.bot.MyBot.bot.sendChatAction(chat_id = cls.chatId, action = telegram.ChatAction.TYPING)
+        if base.bot.MyBot.replyMemberInfo(cls.updateDictionary) == None:
+            base.bot.MyBot.bot.sendMessage(cls.chatId, "Reply to someone's message to authorize him.", reply_to_message_id = cls.messageID)
+        else:
+            Authorization_status = base.authorization.Authorization.authorize(cls.chatInfo, cls.repliedMessageUserID, base.bot.MyBot.authorised_people, base.bot.MyBot.owner_id, cls.userId)
+            base.bot.MyBot.bot.sendMessage(cls.chatId, Authorization_status, reply_to_message_id = cls.messageID)
 
 
     @classmethod
-    def replyToCommand(cls, updateDictionary):
-        messageText = base.bot.MyBot.messageContent(updateDictionary)
-        chatId = base.bot.MyBot.chatId(updateDictionary)
-        messageID = base.bot.MyBot.messageId(updateDictionary)
-        chatInfo = base.bot.MyBot.chatInfo(updateDictionary)
-        userId = base.bot.MyBot.userId(updateDictionary)
-        repliedMessageUserID = base.bot.MyBot.replyMemberId(updateDictionary)
+    def unauthorize(cls):
+        base.bot.MyBot.bot.sendChatAction(chat_id = cls.chatId, action = telegram.ChatAction.TYPING)
+        if base.bot.MyBot.replyMemberInfo(cls.updateDictionary) == None:
+            base.bot.MyBot.bot.sendMessage(cls.chatId, "Reply to someone's message to unauthorize him.", reply_to_message_id = cls.messageID)
+        else:
+            Authorization_status = base.authorization.Authorization.unauthorize(cls.chatInfo, cls.repliedMessageUserID, base.bot.MyBot.authorised_people, base.bot.MyBot.owner_id, cls.userId)
+            base.bot.MyBot.bot.sendMessage(cls.chatId, Authorization_status, reply_to_message_id = cls.messageID)
+
+    @classmethod
+    def ping(cls):
+        base.bot.MyBot.bot.sendChatAction(chat_id = cls.chatId, action = telegram.ChatAction.TYPING)
+        startTime = int(time() * 1000)
+        sentMessage = base.bot.MyBot.bot.sendMessage(cls.chatId, "Calculating latency...", reply_to_message_id = cls.messageID)
+        endTime = int(time() * 1000)
+        diffenceInTime = endTime-startTime
+        sentMessage = sentMessage.to_dict()
+        sentMessageID = base.bot.MyBot.sentMessageId(sentMessage)
+        base.bot.MyBot.bot.editMessageText(chat_id=cls.chatId,message_id=sentMessageID,text=f'latency: {diffenceInTime} ms')
+
+
+
+    @classmethod
+    def replyToCommand(cls, newUpdateDictionary):
+        cls.updateClassInformation(newUpdateDictionary)
         sentMessage = ''
         sentMessageID = 0
         downloadInfoProcess = multiprocessing.Process()        #For making multiprocessing variable accessible by all conditions
 
-        if('/start' in messageText):
-            base.bot.MyBot.bot.sendChatAction(chat_id = chatId, action = telegram.ChatAction.TYPING)
-            base.bot.MyBot.bot.sendMessage(chatId, "Hello, Bot has been started!!!",reply_to_message_id = messageID)
+        if('/start' in cls.messageText):
+            base.bot.MyBot.bot.sendChatAction(chat_id = cls.chatId, action = telegram.ChatAction.TYPING)
+            base.bot.MyBot.bot.sendMessage(cls.chatId, "Hello, Bot has been started!!!",reply_to_message_id = cls.messageID)
 
-        elif('/help' in messageText):
-            base.bot.MyBot.bot.sendChatAction(chat_id = chatId, action = telegram.ChatAction.TYPING)
-            base.bot.MyBot.bot.sendMessage(chatId, "/help - Help command \n/start - Start the bot \n/mirror <Download link to the file>: Mirror a file", reply_to_message_id = messageID)
+        elif('/help' in cls.messageText):
+            base.bot.MyBot.bot.sendChatAction(chat_id = cls.chatId, action = telegram.ChatAction.TYPING)
+            base.bot.MyBot.bot.sendMessage(cls.chatId, "/help - Help command \n/start - Start the bot \n/mirror <Download link to the file>: Mirror a file", reply_to_message_id = cls.messageID)
 
-        # elif('/mirror' in messageText):
-        #     base.bot.MyBot.bot.sendChatAction(chat_id = chatId, action = telegram.ChatAction.TYPING)
-        #     base.bot.MyBot.bot.sendMessage(chatId, "This functionality has not been implemented yet!!!", reply_to_message_id = messageID)
-
-        elif('/authstatus' in messageText):
-            base.bot.MyBot.bot.sendChatAction(chat_id = chatId, action = telegram.ChatAction.TYPING)
-            if base.bot.MyBot.replyMemberInfo(updateDictionary) == None:
-                base.bot.MyBot.bot.sendMessage(chatId, "Reply to someone's message to check authorization status.", reply_to_message_id = messageID)
-            else:
-                Auth_status = base.authorization.Authorization.auth_status(chatInfo, base.bot.MyBot.replyMemberId(updateDictionary), base.bot.MyBot.authorised_people, base.bot.MyBot.owner_id)
-                base.bot.MyBot.bot.sendMessage(chatId, Auth_status, reply_to_message_id = messageID)
+        elif('/authstatus' in cls.messageText):
+            cls.authstatus()
             
-
-        elif('/authorize' in messageText):
-            base.bot.MyBot.bot.sendChatAction(chat_id = chatId, action = telegram.ChatAction.TYPING)
-            if base.bot.MyBot.replyMemberInfo(updateDictionary) == None:
-                base.bot.MyBot.bot.sendMessage(chatId, "Reply to someone's message to authorize him.", reply_to_message_id = messageID)
-            else:
-                Authorization_status = base.authorization.Authorization.authorize(chatInfo, repliedMessageUserID, base.bot.MyBot.authorised_people, base.bot.MyBot.owner_id, userId)
-                base.bot.MyBot.bot.sendMessage(chatId, Authorization_status, reply_to_message_id = messageID)
+        elif('/authorize' in cls.messageText):
+           cls.authorize()
         
-        elif('/unauthorize' in messageText):
-            base.bot.MyBot.bot.sendChatAction(chat_id = chatId, action = telegram.ChatAction.TYPING)
-            if base.bot.MyBot.replyMemberInfo(updateDictionary) == None:
-                base.bot.MyBot.bot.sendMessage(chatId, "Reply to someone's message to unauthorize him.", reply_to_message_id = messageID)
-            else:
-                Authorization_status = base.authorization.Authorization.unauthorize(chatInfo, repliedMessageUserID, base.bot.MyBot.authorised_people, base.bot.MyBot.owner_id, userId)
-                base.bot.MyBot.bot.sendMessage(chatId, Authorization_status, reply_to_message_id = messageID)
+        elif('/unauthorize' in cls.messageText):
+           cls.unauthorize()
 
-        elif('/ping' in messageText):
-            base.bot.MyBot.bot.sendChatAction(chat_id = chatId, action = telegram.ChatAction.TYPING)
-            startTime = int(time() * 1000)
-            sentMessage = base.bot.MyBot.bot.sendMessage(chatId, "Calculating latency...", reply_to_message_id = messageID)
-            endTime = int(time() * 1000)
-            diffenceInTime = endTime-startTime
-            sentMessage = sentMessage.to_dict()
-            sentMessageID = base.bot.MyBot.sentMessageId(sentMessage)
-            base.bot.MyBot.bot.editMessageText(chat_id=chatId,message_id=sentMessageID,text=f'latency: {diffenceInTime} ms')
+        elif('/ping' in cls.messageText):
+            cls.ping()
 
-        elif('/mirror' in messageText):
+        elif('/mirror' in cls.messageText):
 
             link = ''
             i=len('/mirror')+1
-            if(i<len(messageText)):
-                while(messageText[i] == ' ' and i < i+MAX_LOOP):
+            if(i<len(cls.messageText)):
+                while(cls.messageText[i] == ' ' and i < i+MAX_LOOP):
                     i+=1
 
-            for i in range(i, len(messageText)):
-                link += str(messageText[i])
+            for i in range(i, len(cls.messageText)):
+                link += str(cls.messageText[i])
 
             newDownloadGid = Download.addDownload(link)
 
-            sentMessage = base.bot.MyBot.bot.sendMessage(chatId, f"Speed: {0} b/S GiD: {newDownloadGid}", reply_to_message_id = messageID)
+            sentMessage = base.bot.MyBot.bot.sendMessage(cls.chatId, f"Speed: {0} b/S GiD: {newDownloadGid}", reply_to_message_id = cls.messageID)
             sentMessage = sentMessage.to_dict()
             sentMessageID = base.bot.MyBot.sentMessageId(sentMessage)
 
             print(newDownloadGid)
 
-            downloadInfoProcess = multiprocessing.Process(target=cls.sendDownloadInfo, args=(newDownloadGid, sentMessageID, chatId,))
+            downloadInfoProcess = multiprocessing.Process(target=cls.sendDownloadInfo, args=(newDownloadGid, sentMessageID, cls.chatId,))
 
 
             downloadInfoProcess.start()
 
 
-        elif('/cancel' in messageText):
+        elif('/cancel' in cls.messageText):
 
             gid = ''
             i=len('/cancel')+1
 
-            if(i<len(messageText)):
-                while(messageText[i] == ' ' and i < i+MAX_LOOP):
+            if(i<len(cls.messageText)):
+                while(cls.messageText[i] == ' ' and i < i+MAX_LOOP):
                     i+=1
 
-            for i in range(i, len(messageText)):
-                gid += str(messageText[i])
+            for i in range(i, len(cls.messageText)):
+                gid += str(cls.messageText[i])
 
             if Download.cancelDownload(gid, downloadInfoProcess):
-                base.bot.MyBot.bot.deleteMessage(chat_id = chatId, message_id = sentMessageID)
-                base.bot.MyBot.bot.sendMessage(chatId, f"Download with gid: {newDownloadGid} cancelled", reply_to_message_id = messageID)
+                base.bot.MyBot.bot.deleteMessage(chat_id = cls.chatId, message_id = sentMessageID)
+                base.bot.MyBot.bot.sendMessage(cls.chatId, f"Download with gid: {newDownloadGid} cancelled", reply_to_message_id = cls.messageID)
 
             else:
-                base.bot.MyBot.bot.sendMessage(chatId, "Some error occured while closing download info thread...", reply_to_message_id = messageID)
+                base.bot.MyBot.bot.sendMessage(cls.chatId, "Some error occured while closing download info thread...", reply_to_message_id = cls.messageID)
