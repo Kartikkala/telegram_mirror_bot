@@ -1,7 +1,7 @@
 import base.bot
 import base.authorization
 import telegram
-from time import time
+import time
 from utils.download_utils.downloader import Download
 import multiprocessing
 
@@ -10,13 +10,17 @@ MAX_LOOP = 10
 
 class Commands:
 
-    updateDictionary = {}        #To make sure that this is never empty
+    #Parsed Update
+    updateDictionary = {}  
     messageText = ''
     chatId = 0
     messageID = 0
     chatInfo = {}
     userId = 0
     repliedMessageUserID = 0
+
+    #Download Info
+    downloadInfoDictionary = {}
 
 
     @classmethod
@@ -71,22 +75,58 @@ class Commands:
     @classmethod
     def ping(cls):
         base.bot.MyBot.bot.sendChatAction(chat_id = cls.chatId, action = telegram.ChatAction.TYPING)
-        startTime = int(time() * 1000)
+        startTime = int(time.time() * 1000)
         sentMessage = base.bot.MyBot.bot.sendMessage(cls.chatId, "Calculating latency...", reply_to_message_id = cls.messageID)
-        endTime = int(time() * 1000)
+        endTime = int(time.time() * 1000)
         diffenceInTime = endTime-startTime
         sentMessage = sentMessage.to_dict()
         sentMessageID = base.bot.MyBot.sentMessageId(sentMessage)
         base.bot.MyBot.bot.editMessageText(chat_id=cls.chatId,message_id=sentMessageID,text=f'latency: {diffenceInTime} ms')
 
+    @classmethod
+    def mirror(cls):
+        link = ''
+        i=len('/mirror')+1
+        if(i<len(cls.messageText)):
+            while(cls.messageText[i] == ' ' and i < i+MAX_LOOP):
+                i+=1
+
+        for i in range(i, len(cls.messageText)):
+            link += str(cls.messageText[i])
+
+
+        newDownloadGid = Download.addDownload(link)
+        sentMessage = base.bot.MyBot.bot.sendMessage(cls.chatId, f"Speed: {0} b/S GiD: {newDownloadGid}", reply_to_message_id = cls.messageID)
+        sentMessage = sentMessage.to_dict()
+        sentMessageID = base.bot.MyBot.sentMessageId(sentMessage)
+        print(newDownloadGid)
+        downloadInfoProcess = multiprocessing.Process(target=cls.sendDownloadInfo, args=(newDownloadGid, sentMessageID, cls.chatId,))
+        cls.downloadInfoDictionary[newDownloadGid] = [downloadInfoProcess, sentMessageID]
+        downloadInfoProcess.start()
+
+    
+    @classmethod
+    def cancel(cls):
+        gid = ''
+        i=len('/cancel')+1
+        if(i<len(cls.messageText)):
+            while(cls.messageText[i] == ' ' and i < i+MAX_LOOP):
+                i+=1
+        for i in range(i, len(cls.messageText)):
+            gid += str(cls.messageText[i])
+        if Download.cancelDownload(gid, cls.downloadInfoDictionary[gid][0]):
+            print(gid)
+            base.bot.MyBot.bot.deleteMessage(chat_id = cls.chatId, message_id = cls.downloadInfoDictionary[gid][1])
+            base.bot.MyBot.bot.sendMessage(cls.chatId, f"Download with gid: {gid} cancelled", reply_to_message_id = cls.messageID)
+        else:
+            print("Ayee")
+            base.bot.MyBot.bot.sendMessage(cls.chatId, "Some error occured while closing download info thread...", reply_to_message_id = cls.messageID)
+
 
 
     @classmethod
     def replyToCommand(cls, newUpdateDictionary):
-        cls.updateClassInformation(newUpdateDictionary)
-        sentMessage = ''
-        sentMessageID = 0
-        downloadInfoProcess = multiprocessing.Process()        #For making multiprocessing variable accessible by all conditions
+        cls.updateClassInformation(newUpdateDictionary) 
 
         if('/start' in cls.messageText):
             base.bot.MyBot.bot.sendChatAction(chat_id = cls.chatId, action = telegram.ChatAction.TYPING)
@@ -109,45 +149,8 @@ class Commands:
             cls.ping()
 
         elif('/mirror' in cls.messageText):
-
-            link = ''
-            i=len('/mirror')+1
-            if(i<len(cls.messageText)):
-                while(cls.messageText[i] == ' ' and i < i+MAX_LOOP):
-                    i+=1
-
-            for i in range(i, len(cls.messageText)):
-                link += str(cls.messageText[i])
-
-            newDownloadGid = Download.addDownload(link)
-
-            sentMessage = base.bot.MyBot.bot.sendMessage(cls.chatId, f"Speed: {0} b/S GiD: {newDownloadGid}", reply_to_message_id = cls.messageID)
-            sentMessage = sentMessage.to_dict()
-            sentMessageID = base.bot.MyBot.sentMessageId(sentMessage)
-
-            print(newDownloadGid)
-
-            downloadInfoProcess = multiprocessing.Process(target=cls.sendDownloadInfo, args=(newDownloadGid, sentMessageID, cls.chatId,))
-
-
-            downloadInfoProcess.start()
-
-
+            cls.mirror()
+            
         elif('/cancel' in cls.messageText):
-
-            gid = ''
-            i=len('/cancel')+1
-
-            if(i<len(cls.messageText)):
-                while(cls.messageText[i] == ' ' and i < i+MAX_LOOP):
-                    i+=1
-
-            for i in range(i, len(cls.messageText)):
-                gid += str(cls.messageText[i])
-
-            if Download.cancelDownload(gid, downloadInfoProcess):
-                base.bot.MyBot.bot.deleteMessage(chat_id = cls.chatId, message_id = sentMessageID)
-                base.bot.MyBot.bot.sendMessage(cls.chatId, f"Download with gid: {newDownloadGid} cancelled", reply_to_message_id = cls.messageID)
-
-            else:
-                base.bot.MyBot.bot.sendMessage(cls.chatId, "Some error occured while closing download info thread...", reply_to_message_id = cls.messageID)
+            cls.cancel()
+            
