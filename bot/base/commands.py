@@ -22,6 +22,15 @@ class Commands:
     #Download Info
     downloadInfoDictionary = {}
 
+    @classmethod
+    def progressBar(cls, progress):
+        listProgressBar = ['[','=','=','=','=','=','=','=','=','=','=','=','=','=','=','=','=','=','=',']']
+        for i in range(0, int(progress/5.5)):
+            listProgressBar[i+1] = '#'
+            print(progress/10+i)
+        progressBar = ' '.join(listProgressBar)
+        return progressBar
+
 
     @classmethod
     def updateClassInformation(cls, newUpdateDictionary):
@@ -34,15 +43,29 @@ class Commands:
         cls.repliedMessageUserID = base.bot.MyBot.replyMemberId(cls.updateDictionary)
         return
 
+    @classmethod
+    def downloadInfo(cls, gid):
+        download = Download.getDownload(gid)
+        text = f'''
+<b>Name: <i>{download.name}</i></b>                                                                               
+<b>{cls.progressBar(Download.progress(download))}</b>
+<b>Progress: </b> {round(number = Download.progress(download), ndigits=3)} %
+<b>Speed:</b> <i>{Download.getSpeed(download)}</i> 
+
+
+<b>Cancel</b>: <code>/cancel {gid}</code>
+'''
+        return text
+
 
     @classmethod
     def sendDownloadInfo(cls, gid, sentMessage_ID, chat_Id):
          while(1):
                 try:
-                    base.bot.MyBot.bot.editMessageText(chat_id=chat_Id,message_id=sentMessage_ID,text=f"{Download.getSpeed(Download.getDownload(gid))} GiD: {gid}")
+                    base.bot.MyBot.bot.editMessageText(chat_id=chat_Id,message_id=sentMessage_ID,text=cls.downloadInfo(gid),parse_mode ='HTML' )
                     time.sleep(3)
-                except:
-                    pass
+                except Exception as e:
+                    print(f"Error in sendDownloadInfo: {Exception}")
 
     @classmethod
     def authstatus(cls):
@@ -96,7 +119,7 @@ class Commands:
 
 
         newDownloadGid = Download.addDownload(link)
-        sentMessage = base.bot.MyBot.bot.sendMessage(cls.chatId, f"Speed: {0} b/S GiD: {newDownloadGid}", reply_to_message_id = cls.messageID)
+        sentMessage = base.bot.MyBot.bot.sendMessage(cls.chatId,text=cls.downloadInfo(newDownloadGid),parse_mode ='HTML', reply_to_message_id = cls.messageID)
         sentMessage = sentMessage.to_dict()
         sentMessageID = base.bot.MyBot.sentMessageId(sentMessage)
         print(newDownloadGid)

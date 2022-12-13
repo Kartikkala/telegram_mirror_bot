@@ -1,6 +1,4 @@
 from aria2p import API as aria2API, Client as aria2Client
-from time import sleep
-import multiprocessing
 
 class Download:
     downloadList = []
@@ -31,8 +29,8 @@ class Download:
         downloadInfoProcess.terminate()
         return downloadInfoProcess.is_alive()
 
+    @classmethod
+    def progress(cls, download):
+        return download.progress
+
     
-
-
-
-# download.add_uri([''],{'max_concurrent_downloads':2})
